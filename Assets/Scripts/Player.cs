@@ -15,6 +15,7 @@ public class Player : MonoBehaviour {
 
     [SerializeField] float playerSpeed = 6f;
     [SerializeField] float gravity = 13.0f;
+    [SerializeField] float jumpVel = 7.0f;
     [SerializeField][Range(0.0f, 0.5f)] float moveSmoothTime = 0.3f;
     
 
@@ -67,8 +68,8 @@ public class Player : MonoBehaviour {
         if(controller.isGrounded) {
             velocityY = 0.0f;
             if(Input.GetKeyDown(KeyCode.Space)) {
-            velocityY += 10.0f;
-        }
+                velocityY += jumpVel;
+            }
         }
         
         velocityY -= gravity * Time.deltaTime;
