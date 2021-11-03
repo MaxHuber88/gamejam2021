@@ -128,6 +128,9 @@ public class Player : MonoBehaviour {
             } else if(hitItem == null) {                                    //If not hovering over KeyItem, null
                 itemBeingPickedUp = null;
             }
+        } else if(itemBeingPickedUp != null) {              //If previously hovered over item and now not, delete highlighting
+            itemBeingPickedUp.ItemDeselectHighlight();
+            itemBeingPickedUp = null; 
         } else {
             itemBeingPickedUp = null;                                       //If not hovering over anything, null
         }
