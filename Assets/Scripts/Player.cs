@@ -12,7 +12,7 @@ public class Player : MonoBehaviour {
     [SerializeField] float mouseSens = 3.5f;
     [SerializeField][Range(0.0f, 0.5f)] float mouseSmoothTime = 0.03f;
 
-
+    //[SerializeField] float playerMass = 10.0f;
     [SerializeField] float playerSpeed = 6f;
     [SerializeField] float gravity = 13.0f;
     [SerializeField] float jumpVel = 7.0f;
@@ -65,16 +65,27 @@ public class Player : MonoBehaviour {
 
         currentDir = Vector3.SmoothDamp(currentDir, targetDir, ref currentDirVelocity, moveSmoothTime);
         
-        if(controller.isGrounded) {
-            velocityY = 0.0f;
-            if(Input.GetKeyDown(KeyCode.Space)) {
-                velocityY += jumpVel;
-            }
+        if(controller.isGrounded && Input.GetKeyDown(KeyCode.Space)) {
+            velocityY = jumpVel;
         }
         
         velocityY -= gravity * Time.deltaTime;
 
+        velocityY = Mathf.Clamp(velocityY, -100.0f, 20.0f);
+        //Debug.Log("VelocityY: " + velocityY);
+
         Vector3 velocity = (transform.forward * currentDir.z + transform.right * currentDir.x) * playerSpeed + Vector3.up*velocityY;
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void OnTriggerEnter(Collider col) {
+        Debug.Log("Trigger!");
+
+        if(col.gameObject.CompareTag("Respawn")) {
+            Debug.Log("Respawning!");
+            controller.enabled = false;
+            gameObject.transform.position = new Vector3(0, 0, 0);
+            controller.enabled = true;
+        }
     }
 }
