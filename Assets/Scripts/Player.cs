@@ -5,47 +5,76 @@ using UnityEngine;
 public class Player : MonoBehaviour {
     
     //Unity Object References
-    [SerializeField] Transform playerCamera = null;
+    [SerializeField] Camera playerCamera = null;
     
-    //Public Serial Fields
+    //Camera controls
+    [Header("Mouse Camera")]
     [SerializeField] bool lockCursor = true;
     [SerializeField] float mouseSens = 3.5f;
     [SerializeField][Range(0.0f, 0.5f)] float mouseSmoothTime = 0.03f;
 
     //[SerializeField] float playerMass = 10.0f;
-    [SerializeField] float playerSpeed = 6f;
+    [Header("Player Movement")]
+    [SerializeField] float playerSpeed = 6.0f;
     [SerializeField] float gravity = 13.0f;
     [SerializeField] float jumpVel = 7.0f;
     [SerializeField][Range(0.0f, 0.5f)] float moveSmoothTime = 0.3f;
-    
 
-    //Player variables
-    float cameraPitch = 0.0f;
-    float velocityY = 0.0f;
+    [Header("Inventory")]
+    [SerializeField] LayerMask layerMask;
+    [SerializeField] float itemPickupTime = 1.0f;
+    [SerializeField] float reachDist = 5.0f;
+      
+
+    //Movement variables
+    private float cameraPitch = 0.0f;
+    private float velocityY = 0.0f;
     CharacterController controller = null;
     
-    Vector2 currentMouseDelta = Vector2.zero;
-    Vector2 currentMouseDeltaVelocity = Vector2.zero;
+    private Vector2 currentMouseDelta = Vector2.zero;
+    private Vector2 currentMouseDeltaVelocity = Vector2.zero;
 
-    Vector3 currentDir = Vector3.zero;
+    private Vector3 currentDir = Vector3.zero;
     Vector3 currentDirVelocity = Vector3.zero;
 
-    void Start() {
+    //Inventory variables
+    private KeyItem itemBeingPickedUp = null;
+    private float currentPickupTime = 0f;
+    List<KeyItem> playerInventory = null;
+
+    private void Start() {
         controller = GetComponent<CharacterController>();
 
         if(lockCursor) {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+        } else {
+            Cursor.lockState = CursorLockMode.None;
         }
     }
 
-    void Update() {
+    private void Update() {
         //Call all update functions
         UpdateMouseLook();
         UpdatePlayerMovement();
+        UpdateInventory();
     }
 
-    void UpdateMouseLook() {
+    private void OnTriggerEnter(Collider col) {
+        Debug.Log("Trigger!");
+
+        if(col.gameObject.CompareTag("Respawn")) {
+            Debug.Log("Respawning!");
+            controller.enabled = false;
+            gameObject.transform.position = new Vector3(0, 0, 0);
+            controller.enabled = true;
+        }
+    }
+
+
+    //Functions
+
+    private void UpdateMouseLook() {
         //Mouse look
         Vector2 targetMouseDelta = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
 
@@ -54,11 +83,11 @@ public class Player : MonoBehaviour {
         cameraPitch -= currentMouseDelta.y * mouseSens;
         cameraPitch = Mathf.Clamp(cameraPitch, -90.0f, 90.0f);
 
-        playerCamera.localEulerAngles = Vector3.right * cameraPitch;
+        playerCamera.transform.localEulerAngles = Vector3.right * cameraPitch;
         transform.Rotate(Vector3.up * currentMouseDelta.x * mouseSens);
     }
 
-    void UpdatePlayerMovement() {
+    private void UpdatePlayerMovement() {
         //Player movement
         Vector3 targetDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical")).normalized;
             //Since diagonal input, ie. (1,0,1) has a larger length, normalize to equal vector magnitudes
@@ -78,14 +107,47 @@ public class Player : MonoBehaviour {
         controller.Move(velocity * Time.deltaTime);
     }
 
-    void OnTriggerEnter(Collider col) {
-        Debug.Log("Trigger!");
+    private void UpdateInventory() {
+        //Inventory tracking
 
-        if(col.gameObject.CompareTag("Respawn")) {
-            Debug.Log("Respawning!");
-            controller.enabled = false;
-            gameObject.transform.position = new Vector3(0, 0, 0);
-            controller.enabled = true;
+        //do stuff with playerInventory;
+
+        //Detect if hovering over item
+        Ray ray = playerCamera.ViewportPointToRay(Vector3.one / 2f);
+        Debug.DrawRay(ray.origin, ray.direction*reachDist, Color.red);
+
+        RaycastHit hitInfo;
+        if(Physics.Raycast(ray, out hitInfo, reachDist, layerMask)) {       //Raycast to see if hit gameObject
+            KeyItem hitItem = hitInfo.collider.GetComponent<KeyItem>();     //Does gameObject have KeyItem Component?
+            if(itemBeingPickedUp != null && hitItem == null) {              //If previously hovered over item and now not, delete highlighting
+                itemBeingPickedUp.ItemDeselectHighlight();
+                itemBeingPickedUp = null;                                   
+            } else if(hitItem != null && hitItem != itemBeingPickedUp) {    //If hovering over item, highlight for first time
+                itemBeingPickedUp = hitItem;
+                itemBeingPickedUp.ItemSelectHighlight();
+            } else if(hitItem == null) {                                    //If not hovering over KeyItem, null
+                itemBeingPickedUp = null;
+            }
+        } else {
+            itemBeingPickedUp = null;                                       //If not hovering over anything, null
         }
+        //Debug.Log(itemBeingPickedUp);
+
+
+        //If hovering over item, and holding e to interact, hold for itemPickupTime to add to inventory
+        if(itemBeingPickedUp != null) {
+            if(Input.GetKey(KeyCode.E)) {
+                currentPickupTime += Time.deltaTime;
+                if(currentPickupTime >= itemPickupTime) {
+                    //Add item to inventory
+                    Debug.Log("Picking up item!");
+                    Destroy(itemBeingPickedUp.gameObject);
+                    itemBeingPickedUp = null;
+                }
+            }
+        } else {
+            currentPickupTime = 0;
+        }
+
     }
 }
