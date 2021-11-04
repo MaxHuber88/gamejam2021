@@ -6,6 +6,7 @@ public class Player : MonoBehaviour {
     
     //Unity Object References
     [SerializeField] Camera playerCamera = null;
+    [SerializeField] Transform grabSlot = null;
     
     //Camera controls
     [Header("Mouse Camera")]
@@ -141,16 +142,20 @@ public class Player : MonoBehaviour {
         if(itemBeingPickedUp != null) {
             if(Input.GetKey(KeyCode.E)) {
                 currentPickupTime += Time.deltaTime;
-                if(currentPickupTime >= itemPickupTime) {
-                    //Add item to inventory
+                if(currentPickupTime >= itemPickupTime && itemBeingPickedUp.GetHeld() == false) {
                     Debug.Log("Picking up item!");
-                    Destroy(itemBeingPickedUp.gameObject);
-                    itemBeingPickedUp = null;
+                    itemBeingPickedUp.PickItem(grabSlot);
+                    currentPickupTime = 0;
+                } else if(currentPickupTime >= itemPickupTime && itemBeingPickedUp.GetHeld() == true){
+                    Debug.Log("Dropping item!");
+                    itemBeingPickedUp.DropItem();
+                    currentPickupTime = 0;
                 }
+            } else {
+                currentPickupTime = 0;
             }
         } else {
             currentPickupTime = 0;
         }
-
     }
 }
